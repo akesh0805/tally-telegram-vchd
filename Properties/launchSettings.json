@@ -1,0 +1,9 @@
+{
+  "profiles": {
+    "TallyTelegramVchd": {
+      "commandName": "Project",
+      "commandLineArgs": "--port 7173",
+      "launchBrowser": false
+    }
+  }
+}

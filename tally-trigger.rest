@@ -1,0 +1,110 @@
+POST http://127.0.0.1:7071/api/TallyHookVchd HTTP/1.1
+Content-Type: application/json
+
+{
+    "eventId": "b22a205e-fd6b-4d83-919f-d9fb09057a17",
+    "eventType": "FORM_RESPONSE",
+    "createdAt": "2024-10-21T17:30:14.088Z",
+    "data": {
+        "responseId": "GVX2Oj",
+        "submissionId": "GVX2Oj",
+        "respondentId": "GqgVyQ",
+        "formId": "mV1pXg",
+        "formName": "Vagon depolardan vagon yig'uv sexi bo'yicha kunlik hisobot",
+        "createdAt": "2024-10-21T17:30:13.000Z",
+        "fields": [
+            {
+                "key": "question_MXq5El",
+                "label": "Korxona...",
+                "type": "MULTIPLE_CHOICE",
+                "value": [
+                    "842bd90e-74cd-4ebf-af3a-5432be6f1914"
+                ],
+                "options": [
+                    {
+                        "id": "c1686fdc-e105-4002-ba83-341656d5baeb",
+                        "text": "Toshkent vagon deposi"
+                    },
+                    {
+                        "id": "842bd90e-74cd-4ebf-af3a-5432be6f1914",
+                        "text": "Qo'qon vagon deposi"
+                    },
+                    {
+                        "id": "271b8cab-c45a-438e-b674-1d08d85b6b4c",
+                        "text": "Andijon vagon deposi"
+                    },
+                    {
+                        "id": "99338644-967e-45d9-a40f-68293d18cd29",
+                        "text": "Xavast vagon deposi"
+                    },
+                    {
+                        "id": "b23eace7-5324-4d31-82c6-bc7a4194c121",
+                        "text": "Buxoro vagon deposi"
+                    },
+                    {
+                        "id": "e9154296-54e2-47c4-91e3-584912c6bbdf",
+                        "text": "Qarshi vagon deposi"
+                    },
+                    {
+                        "id": "44e41807-54be-4f02-b94f-26fb9e585608",
+                        "text": "Qo'rg'irot vagon deposi"
+                    }
+                ]
+            },
+            {
+                "key": "question_Jqx0Or",
+                "label": "Nechta yuk vagoni ta'mirga olindi",
+                "type": "INPUT_TEXT",
+                "value": "10"
+            },
+            {
+                "key": "question_ga149P",
+                "label": "Ta'mirga olinganlardan nechtasi DR",
+                "type": "INPUT_TEXT",
+                "value": "3"
+            },
+            {
+                "key": "question_yMRDJ8",
+                "label": "Ta'mirga olinganlardan nechtasi KR",
+                "type": "INPUT_TEXT",
+                "value": "2"
+            },
+            {
+                "key": "question_XLkq4P",
+                "label": "Ta'mirga olinganlardan nechtasi KRP",
+                "type": "INPUT_TEXT",
+                "value": "5"
+            },
+            {
+                "key": "question_8qyeZl",
+                "label": "Nechta yuk vagoni ta'mirlandi",
+                "type": "INPUT_TEXT",
+                "value": "8"
+            },
+            {
+                "key": "question_0dyPe9",
+                "label": "Ta'mirlanganlardan nechtasi DR",
+                "type": "INPUT_TEXT",
+                "value": "4"
+            },
+            {
+                "key": "question_zjoe7k",
+                "label": "Ta'mirlanganlardan nechtasi KR",
+                "type": "INPUT_TEXT",
+                "value": "2"
+            },
+            {
+                "key": "question_5bD2ZN",
+                "label": "Ta'mirlanganlardan nechtasi KRP",
+                "type": "INPUT_TEXT",
+                "value": "2"
+            },
+            {
+                "key": "question_dE1P9r",
+                "label": "Qo'shimcha izoh",
+                "type": "TEXTAREA",
+                "value": "mana senga"
+            }
+        ]
+    }
+}
