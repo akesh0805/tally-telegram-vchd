@@ -3,117 +3,100 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.Functions.Worker;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Hosting;
+using TallyTelegramVchd.Models;
+using Telegram.Bot;
 
-namespace Tally.Hooks
+namespace TallyTelegramVchd;
+
+public class TallyHookVchd(ILogger<TallyHookVchd> logger,
+    ITelegramBotClient botClient,
+    IConfiguration configuration,
+    IWebHostEnvironment hostingEnvironment)
 {
-    public class TallyHookVchd(ILogger<TallyHookVchd> logger)
+
+    [Function("TallyHookVchd")]
+    public async Task<IActionResult> RunAsync(
+        [HttpTrigger(AuthorizationLevel.Anonymous, "post")] HttpRequest request,
+        CancellationToken cancellationToken = default)
     {
+        logger.LogInformation("C# HTTP trigger function processing a request from Tally.so");
 
-        [Function("TallyHookVchd")]
-        public async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest request)
+        string requestBody = await new StreamReader(request.Body).ReadToEndAsync(cancellationToken);
+        logger.LogInformation("Request body: {RequestBody}", requestBody);
+
+        TallyResponse? tallyResponse;
+        try
         {
-            logger.LogInformation("C# HTTP trigger function processing a request from Tally.so");
-
-            // Read the request body
-            string requestBody = await new StreamReader(request.Body).ReadToEndAsync();
-
-            // Deserialize the JSON payload
-            var tallyResponse = JsonSerializer.Deserialize<TallyResponse>(requestBody);
-
+            tallyResponse = JsonSerializer.Deserialize<TallyResponse>(requestBody);
             if (tallyResponse == null)
             {
+                logger.LogWarning("Deserialization failed, result is null");
                 return new BadRequestObjectResult("Invalid request body");
             }
 
-            // Extract and process the data
-            var formData = new FormData
+            var bot = await botClient.GetMeAsync(cancellationToken);
+            logger.LogInformation("Bot name: {BotName} trying to send message", bot.Username);
+
+            var chatId = configuration.GetValue<long>("Bot:VchdReports:GroupId");
+            if (chatId == 0)
             {
-                Company = GetFieldValue(tallyResponse, "question_MXq5El"),
-                VagonsInRepair = ParseIntSafely(GetFieldValue(tallyResponse, "question_Jqx0Or")),
-                VagonsDR = ParseIntSafely(GetFieldValue(tallyResponse, "question_ga149P")),
-                VagonsKR = ParseIntSafely(GetFieldValue(tallyResponse, "question_yMRDJ8")),
-                VagonsKRP = ParseIntSafely(GetFieldValue(tallyResponse, "question_XLkq4P")),
-                VagonsRepaired = ParseIntSafely(GetFieldValue(tallyResponse, "question_8qyeZl")),
-                VagonsRepairedDR = ParseIntSafely(GetFieldValue(tallyResponse, "question_0dyPe9")),
-                VagonsRepairedKR = ParseIntSafely(GetFieldValue(tallyResponse, "question_zjoe7k")),
-                VagonsRepairedKRP = ParseIntSafely(GetFieldValue(tallyResponse, "question_5bD2ZN")),
-                AdditionalNotes = GetFieldValue(tallyResponse, "question_dE1P9r")
-            };
-
-            // TODO: Process the formData (e.g., save to database, send notifications, etc.)
-
-            return new OkObjectResult("So'rovnoma yuborildi!");
-        }
-
-        private string GetFieldValue(TallyResponse response, string key)
-        {
-            var field = response.Data?.Fields?.FirstOrDefault(f => f.Key == key);
-            return field?.Value?.ToString() ?? string.Empty;
-        }
-
-        private int ParseIntSafely(string value)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return 0; // или другое значение по умолчанию
+                logger.LogError("ChatId is not configured correctly");
+                return new StatusCodeResult(500);
             }
 
-            if (int.TryParse(value, out int result))
-            {
-                return result;
-            }
-
-            return 0; // или другое значение по умолчанию
+            var message = await botClient.SendTextMessageAsync(
+                chatId,
+                FormatReport(tallyResponse.Data),
+                parseMode: Telegram.Bot.Types.Enums.ParseMode.Html,
+                cancellationToken: cancellationToken);
+            
+            // if (hostingEnvironment.IsDevelopment())
+            // {
+            //     await Task.Delay(100000, cancellationToken);
+            //     await botClient.DeleteMessageAsync(chatId, message.MessageId, cancellationToken: cancellationToken);
+            // }
         }
+        catch (JsonException ex)
+        {
+            logger.LogError(ex, "Error deserializing Tally request: {Message}", ex.Message);
+            return new BadRequestObjectResult("Invalid request body");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error processing Tally request: {Message}", ex.Message);
+            return new StatusCodeResult(500);
+        }
+        return new OkObjectResult("So'rovnoma yuborildi!");
     }
 
-    // Define classes to deserialize the JSON payload
-    public class TallyResponse
+    private string FormatReport(TallyResponseData data)
     {
-        public string? EventId { get; set; }
-        public string? EventType { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public TallyData? Data { get; set; }
-    }
+        return $@"
+🚂 <b>Kunlik Ta'mirlangan Vagonlar Hisoboti</b> 🚂
 
-    public class TallyData
-    {
-        public string? ResponseId { get; set; }
-        public string? SubmissionId { get; set; }
-        public string? RespondentId { get; set; }
-        public string? FormId { get; set; }
-        public string? FormName { get; set; }
-        public DateTime? CreatedAt { get; set; }
-        public List<TallyField>? Fields { get; set; }
-    }
+🏭 <b>Korxona:</b> {GetFieldValue(data, "Korxona nomi")}
 
-    public class TallyField
-    {
-        public string? Key { get; set; }
-        public string? Label { get; set; }
-        public string? Type { get; set; }
-        public object? Value { get; set; }
-        public List<TallyOption>? Options { get; set; }
-    }
+📥 <b>Ta'mirga olingan vagonlar:</b>
+    • Jami: {GetFieldValue(data, "Nechta yuk vagoni ta'mirga olindi")} ta
+    • DR: {GetFieldValue(data, "Ta'mirga olinganlardan nechtasi DR")} ta
+    • KR: {GetFieldValue(data, "Ta'mirga olinganlardan nechtasi KR")} ta
+    • KRP: {GetFieldValue(data, "Ta'mirga olinganlardan nechtasi KRP")} ta
 
-    public class TallyOption
-    {
-        public string? Id { get; set; }
-        public string? Text { get; set; }
-    }
+📤 <b>Ta'mirlangan vagonlar:</b>
+    • Jami: {GetFieldValue(data, "Nechta yuk vagoni ta'mirlandi")} ta
+    • DR: {GetFieldValue(data, "Ta'mirlanganlardan nechtasi DR")} ta
+    • KR: {GetFieldValue(data, "Ta'mirlanganlardan nechtasi KR")} ta
+    • KRP: {GetFieldValue(data, "Ta'mirlanganlardan nechtasi KRP")} ta
 
-    public class FormData
-    {
-        public string? Company { get; set; }
-        public int VagonsInRepair { get; set; }
-        public int VagonsDR { get; set; }
-        public int VagonsKR { get; set; }
-        public int VagonsKRP { get; set; }
-        public int VagonsRepaired { get; set; }
-        public int VagonsRepairedDR { get; set; }
-        public int VagonsRepairedKR { get; set; }
-        public int VagonsRepairedKRP { get; set; }
-        public string? AdditionalNotes { get; set; }
+💬 <b>Qo'shimcha izohlar:</b>
+{GetFieldValue(data, "Qo'shimcha izoh")}
+
+🕒 <i>Hisobot vaqti: {DateTime.Now:dd.MM.yyyy HH:mm}</i>";
+
+    string GetFieldValue(TallyResponseData data, string label) =>
+        data.Fields.FirstOrDefault(f => f.Label?.Equals(label, StringComparison.InvariantCultureIgnoreCase) == true)?.Value?.ToString() ?? "N/A";
     }
 }
